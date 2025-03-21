@@ -130,8 +130,8 @@ export default function CDTimeline() {
     const timestamps = [];
     for (let i = 0; i <= timelineLength; i += interval) {
       timestamps.push(
-        <div key={i} className="absolute border-l border-gray-400 h-full text-xs text-gray-600" style={{ left: `${(i / timelineLength) * 100}%` }}>
-          <div className="absolute -top-6 left-0 ml-1 whitespace-nowrap">{formatTime(i)}</div>
+        <div key={i} className={`absolute border-l h-full text-xs ${darkMode ? 'text-white border-gray-600' : 'text-gray-600 border-gray-400'}`} style={{ left: `${(i / timelineLength) * 100}%` }}>
+          <div className="absolute -top-8 left-0 ml-1 whitespace-nowrap">{formatTime(i)}</div>
         </div>
       );
     }
