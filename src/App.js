@@ -1,4 +1,4 @@
-// Full corrected implementation with renderTimestamps defined
+// Full corrected implementation with renderTimestamps defined and dark mode support
 import React, { useState } from "react";
 import { Slider } from "./components/ui/slider";
 import { Card, CardContent } from "./components/ui/card";
@@ -22,6 +22,7 @@ export default function CDTimeline() {
   const [events, setEvents] = useState([]);
   const [forceOfNatureCD, setForceOfNatureCD] = useState(60);
   const [whirlingStarsCD, setWhirlingStarsCD] = useState(100);
+  const [darkMode, setDarkMode] = useState(true);
 
   const abilities = baseAbilities.map((a) => {
     if (a.name === "Force of Nature") return { ...a, baseCooldown: forceOfNatureCD };
@@ -94,7 +95,6 @@ export default function CDTimeline() {
         }
         updatedEvents = updatedEvents.map((e) => (e.id === id ? { ...e, time: newTime } : e));
 
-        // Move following events forward if needed
         for (let j = i + 1; j < sameAbilityEvents.length; j++) {
           const prev = updatedEvents.find((e) => e.id === sameAbilityEvents[j - 1].id);
           const next = updatedEvents.find((e) => e.id === sameAbilityEvents[j].id);
@@ -139,8 +139,11 @@ export default function CDTimeline() {
   };
 
   return (
-    <div className="p-4 space-y-6">
-      <h1 className="text-2xl font-bold">CD Timeline Visualizer</h1>
+    <div className={`p-4 space-y-6 min-h-screen ${darkMode ? "bg-gray-900 text-white" : "bg-white text-black"}`}>
+      <div className="flex justify-between items-center">
+        <h1 className="text-2xl font-bold">CD Timeline Visualizer</h1>
+        <Button onClick={() => setDarkMode(!darkMode)} className="text-sm">Toggle {darkMode ? "Light" : "Dark"} Mode</Button>
+      </div>
 
       <div className="space-x-2">
         {abilities.map((a) => (
@@ -201,9 +204,9 @@ export default function CDTimeline() {
       </div>
 
       <div className="mt-8 border-t pt-4">
-                <div className="relative border bg-gray-100 overflow-visible h-10">{renderTimestamps()}</div>
+        <div className={`relative border overflow-visible h-10 ${darkMode ? "bg-gray-800" : "bg-gray-100"}`}>{renderTimestamps()}</div>
         {abilities.map((ability) => (
-          <div key={ability.name} className="relative h-12 border-b bg-white">
+          <div key={ability.name} className={`relative h-12 border-b ${darkMode ? "bg-gray-900" : "bg-white"}`}>
             {(ability.name === "Whirling Stars" ? getWhirlingStarsChargesTimeline() : events.filter((e) => e.ability === ability.name)).map((event, index, allEvents) => {
               const adjustedCD = event.adjustedCD || calculateAdjustedCooldown(event);
               const widthPercent = (adjustedCD / timelineLength) * 100;
