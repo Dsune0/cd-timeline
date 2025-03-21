@@ -18,8 +18,10 @@ function formatTime(seconds) {
 }
 
 export default function CDTimeline() {
-  const [timelineLength, setTimelineLength] = useState(300);
+  const [controlEnabled, setControlEnabled] = useState(true);
+  const defaultTimelineLength = 300;
   const [events, setEvents] = useState([]);
+  const [timelineLength, setTimelineLength] = useState(defaultTimelineLength);
   const [forceOfNatureCD, setForceOfNatureCD] = useState(60);
   const [whirlingStarsCD, setWhirlingStarsCD] = useState(100);
   const [darkMode, setDarkMode] = useState(true);
@@ -31,6 +33,7 @@ export default function CDTimeline() {
   });
 
   const calculateAdjustedCooldown = (event, allEvents = events) => {
+    if (!controlEnabled || !event.controlOfTheDream) return event.cooldown;
     const sameAbilityEvents = allEvents.filter((e) => e.ability === event.ability).sort((a, b) => a.time - b.time);
     let controlCDR = 15;
     for (let i = 0; i < sameAbilityEvents.length; i++) {
@@ -62,6 +65,8 @@ export default function CDTimeline() {
   };
 
   const addEvent = (ability) => {
+    // Update timeline length dynamically after adding event
+    const tempEvents = [...events];
     const sameAbilityEvents = events.filter((e) => e.ability === ability.name).sort((a, b) => a.time - b.time);
     let suggestedTime = 0;
     if (sameAbilityEvents.length > 0) {
@@ -76,39 +81,46 @@ export default function CDTimeline() {
       cooldown: ability.baseCooldown,
       controlOfTheDream: ability.controlOfTheDream,
     };
-    setEvents([...events, newEvent]);
+    tempEvents.push(newEvent);
+    setEvents(tempEvents);
+    const newLastUsage = Math.max(...tempEvents.map(e => e.time + calculateAdjustedCooldown(e)));
+    setTimelineLength(Math.max(defaultTimelineLength, Math.ceil((newLastUsage + 30) / 30) * 30));
   };
 
   const updateEventTime = (id, newTime) => {
-    const eventToUpdate = events.find((e) => e.id === id);
-    const sameAbilityEvents = events.filter((e) => e.ability === eventToUpdate.ability).sort((a, b) => a.time - b.time);
+  const eventToUpdate = events.find((e) => e.id === id);
+  const sameAbilityEvents = events.filter((e) => e.ability === eventToUpdate.ability).sort((a, b) => a.time - b.time);
 
-    let updatedEvents = [...events];
+  let updatedEvents = [...events];
 
-    for (let i = 0; i < sameAbilityEvents.length; i++) {
-      if (sameAbilityEvents[i].id === id) {
-        const prevEvent = sameAbilityEvents[i - 1];
-        if (prevEvent) {
-          const prevCD = calculateAdjustedCooldown(prevEvent);
-          const minTime = prevEvent.time + prevCD;
-          if (newTime < minTime) newTime = minTime;
-        }
-        updatedEvents = updatedEvents.map((e) => (e.id === id ? { ...e, time: newTime } : e));
-
-        for (let j = i + 1; j < sameAbilityEvents.length; j++) {
-          const prev = updatedEvents.find((e) => e.id === sameAbilityEvents[j - 1].id);
-          const next = updatedEvents.find((e) => e.id === sameAbilityEvents[j].id);
-          const prevCD = calculateAdjustedCooldown(prev, updatedEvents);
-          const minTime = prev.time + prevCD;
-          if (next.time < minTime) {
-            updatedEvents = updatedEvents.map((e) => e.id === next.id ? { ...e, time: minTime } : e);
-          }
-        }
-        break;
+  for (let i = 0; i < sameAbilityEvents.length; i++) {
+    if (sameAbilityEvents[i].id === id) {
+      const prevEvent = sameAbilityEvents[i - 1];
+      if (prevEvent) {
+        const prevCD = calculateAdjustedCooldown(prevEvent);
+        const minTime = prevEvent.time + prevCD;
+        if (newTime < minTime) newTime = minTime;
       }
+      updatedEvents = updatedEvents.map((e) => (e.id === id ? { ...e, time: newTime } : e));
+
+      // Move following events forward if needed
+      for (let j = i + 1; j < sameAbilityEvents.length; j++) {
+        const prev = updatedEvents.find((e) => e.id === sameAbilityEvents[j - 1].id);
+        const next = updatedEvents.find((e) => e.id === sameAbilityEvents[j].id);
+        const prevCD = calculateAdjustedCooldown(prev, updatedEvents);
+        const minTime = prev.time + prevCD;
+        if (next.time < minTime) {
+          updatedEvents = updatedEvents.map((e) => e.id === next.id ? { ...e, time: minTime } : e);
+        }
+      }
+      break;
     }
-    setEvents(updatedEvents);
-  };
+  }
+
+  setEvents(updatedEvents);
+    const newLastUsage = Math.max(...updatedEvents.map(e => e.time + calculateAdjustedCooldown(e)));
+    setTimelineLength(Math.max(defaultTimelineLength, Math.ceil((newLastUsage + 30) / 30) * 30));
+};
 
   const handleInputChange = (id, value) => {
     const parts = value.split(":");
@@ -130,8 +142,8 @@ export default function CDTimeline() {
     const timestamps = [];
     for (let i = 0; i <= timelineLength; i += interval) {
       timestamps.push(
-        <div key={i} className={`absolute border-l h-full text-xs ${darkMode ? 'text-white border-gray-600' : 'text-gray-600 border-gray-400'}`} style={{ left: `${(i / timelineLength) * 100}%` }}>
-          <div className="absolute -top-8 left-0 ml-1 whitespace-nowrap">{formatTime(i)}</div>
+        <div key={i} className={`absolute border-l h-4 text-xs ${darkMode ? 'text-white border-gray-600' : 'text-gray-600 border-gray-400'}`} style={{ left: `${(i / timelineLength) * 100}%` }}>
+          <div className="absolute -top-5 left-0 ml-1 whitespace-nowrap">{formatTime(i)}</div>
         </div>
       );
     }
@@ -153,17 +165,36 @@ export default function CDTimeline() {
         ))}
       </div>
 
-      <div className="flex space-x-4">
+      <div className="grid grid-cols-4 gap-4 items-start">
         <div>
           <label className="block font-semibold">Force of Nature CD:</label>
-          <select value={forceOfNatureCD} onChange={(e) => setForceOfNatureCD(Number(e.target.value))} className="border rounded p-1">
+          <select value={forceOfNatureCD} onChange={(e) => setForceOfNatureCD(Number(e.target.value))} className={`border rounded p-1 ${darkMode ? 'bg-white text-black' : 'bg-white text-black'}`}>
             <option value={45}>45s</option>
             <option value={60}>60s</option>
           </select>
         </div>
         <div>
+          <label className="block font-semibold">Convoke the Spirits CD:</label>
+          <select value={abilities.find(a => a.name === 'Convoke the Spirits')?.baseCooldown || 120} onChange={(e) => {
+            const val = Number(e.target.value);
+            baseAbilities.find(a => a.name === 'Convoke the Spirits').baseCooldown = val;
+            const updated = abilities.map(a => a.name === 'Convoke the Spirits' ? { ...a, baseCooldown: val } : a);
+            setEvents([...events]);
+          }} className={`border rounded p-1 ${darkMode ? 'bg-white text-black' : 'bg-white text-black'}`}>
+            <option value={60}>60s</option>
+            <option value={120}>120s</option>
+          </select>
+        </div>
+        <div className="col-span-1 flex flex-col justify-start">
+          <label className="block font-semibold mb-1">Options</label>
+          <div className="inline-flex items-center gap-2">
+            <input type="checkbox" checked={controlEnabled} onChange={() => setControlEnabled(!controlEnabled)} />
+            <span>Control of the Dream</span>
+          </div>
+          </div>
+        <div className="col-span-1">
           <label className="block font-semibold">Whirling Stars CD:</label>
-          <select value={whirlingStarsCD} onChange={(e) => setWhirlingStarsCD(Number(e.target.value))} className="border rounded p-1">
+          <select value={whirlingStarsCD} onChange={(e) => setWhirlingStarsCD(Number(e.target.value))} className={`border rounded p-1 ${darkMode ? 'bg-white text-black' : 'bg-white text-black'}`}>
             <option value={90}>90s</option>
             <option value={100}>100s</option>
           </select>
@@ -183,14 +214,15 @@ export default function CDTimeline() {
                       type="text"
                       value={formatTime(event.time)}
                       onChange={(e) => handleInputChange(event.id, e.target.value)}
-                      className="border rounded px-2 py-1 text-sm w-full"
+                      className={`border rounded px-2 py-1 text-sm w-full ${darkMode ? 'bg-white text-black' : 'bg-white text-black'}`}
                     />
                     <Slider
-                      min={0}
-                      max={timelineLength}
-                      step={1}
-                      value={[event.time]}
-                      onValueChange={(value) => updateEventTime(event.id, value[0])}
+  key={event.id}
+  min={0}
+  max={timelineLength}
+  step={1}
+  value={[event.time]}
+  onValueChange={(value) => updateEventTime(event.id, value[0])}
                     />
                     <Button size="sm" variant="destructive" className="w-fit px-2 py-1 text-xs" onClick={() => removeEvent(event.id)}>
                       Remove
@@ -203,8 +235,8 @@ export default function CDTimeline() {
         ))}
       </div>
 
-      <div className="mt-8 border-t pt-4">
-        <div className={`relative border overflow-visible h-10 ${darkMode ? "bg-gray-800" : "bg-gray-100"}`}>{renderTimestamps()}</div>
+      <div className="mt-8 pt-4">
+  <div className={`relative overflow-visible h-10 ${darkMode ? "bg-gray-900" : "bg-white"}`}>{renderTimestamps()}</div>
         {abilities.map((ability) => (
           <div key={ability.name} className={`relative h-12 border-b ${darkMode ? "bg-gray-900" : "bg-white"}`}>
             {(ability.name === "Whirling Stars" ? getWhirlingStarsChargesTimeline() : events.filter((e) => e.ability === ability.name)).map((event, index, allEvents) => {
