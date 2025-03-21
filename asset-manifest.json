@@ -1,0 +1,15 @@
+{
+  "files": {
+    "main.css": "/cd-timeline/static/css/main.afa33b40.css",
+    "main.js": "/cd-timeline/static/js/main.fe4b8292.js",
+    "static/js/453.07ecdb9d.chunk.js": "/cd-timeline/static/js/453.07ecdb9d.chunk.js",
+    "index.html": "/cd-timeline/index.html",
+    "main.afa33b40.css.map": "/cd-timeline/static/css/main.afa33b40.css.map",
+    "main.fe4b8292.js.map": "/cd-timeline/static/js/main.fe4b8292.js.map",
+    "453.07ecdb9d.chunk.js.map": "/cd-timeline/static/js/453.07ecdb9d.chunk.js.map"
+  },
+  "entrypoints": [
+    "static/css/main.afa33b40.css",
+    "static/js/main.fe4b8292.js"
+  ]
+}
